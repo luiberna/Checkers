@@ -1,6 +1,14 @@
 import pt.iscte.guitoo.Color;
 import pt.iscte.guitoo.StandardColor;
 import pt.iscte.guitoo.board.Board;
+import java.io.File;
+import java.io.IOException;
+import java.io.FileWriter;
+import java.util.Scanner;
+
+//Para guardar e ler ficheiros, simplesmente guardar a matriz de Strings (em linhas ou em matriz) do ficheiro e de seguida 
+//ler a matriz quando abrir o ficheiro. Se a matriz for nula numa certa posicao a string sera um espaco seguido de uma quebra
+//de linha
 
 public class Checkers {
 	Board board;
@@ -19,11 +27,65 @@ public class Checkers {
 		board.addAction("random", this::random);
 		board.addAction("new", this::newGame);
 		board.addAction("save", this::save);
+		board.addAction("load", this::load);
 		board.addMouseListener(this::click);
 	}
 
-	void save() {
+	void load() {
+		Checkers gui = new Checkers();
+		gui.start();
 		
+		try {
+			String fileName = board.promptText("File Name:");
+			Scanner myScanner = new Scanner(new File(fileName));
+			
+			game = new String[8][8];
+			selected = null;
+			for (int i = 0; i < 8; i++) {
+				for (int j = 0; j < 8; j++) {
+					String line = myScanner.nextLine();
+					if (line.equals("null"))
+						game[i][j] = null;
+					else if (line.equals("black.png"))
+						game[i][j] = "black.png";
+					else if (line.equals("white.png"))
+						game[i][j] = "white.png";
+				}
+			}
+			String line = myScanner.nextLine();
+			turnW = line.equals("true");
+			myScanner.close();
+			board.setBackgroundProvider(this::background);
+			board.showMessage("Game loaded successfully");
+		}
+		catch (IOException e) {
+			board.showMessage("Error loading the file: " + e.getMessage());
+		}
+	}	
+
+	void save() {
+		try {
+			String fileName = board.promptText("File Name:");
+			FileWriter fileWriter = new FileWriter(new File(fileName));
+
+			for (int i = 0; i < 8; i++) {
+				for (int j = 0; j < 8; j++) {
+					if (game[i][j] == null)
+						fileWriter.write("null" + "\n");
+					else
+						fileWriter.write(game[i][j] + "\n");
+				}
+			}
+			if (turnW)
+				fileWriter.write("true");
+			else
+				fileWriter.write("false");
+			board.showMessage("File created: " + fileName);
+			fileWriter.close();
+		}
+		catch (IOException e) { 
+			board.showMessage("Error saving the file: " + e.getMessage());
+		}
 	}
 
 	//Used "trys" so it doesnt break the program when there is no more plays to be done
@@ -39,8 +101,8 @@ public class Checkers {
 			selected = new int[]{line, col};
 			if (checkCaptures() && canCapture(line, col)) {
 				for (int i = 0; i < 10000; i++) {
-					int targetLine = (int) (Math.random() * 8);
-					int targetCol = (int) (Math.random() * 8);
+					int targetLine = (int)(Math.random() * 8);
+					int targetCol = (int)(Math.random() * 8);
 	
 					if (checkCaptures() && inBounds(targetLine, targetCol) && isDark(targetLine, targetCol)) {
 						capture(targetLine, targetCol);
@@ -53,8 +115,8 @@ public class Checkers {
 				}
 			}
 			for (int i = 0; i < 1000; i++) {
-				int targetLine = (int) (Math.random() * 8);
-				int targetCol = (int) (Math.random() * 8);
+				int targetLine = (int)(Math.random() * 8);
+				int targetCol = (int)(Math.random() * 8);
 
 				if (!checkCaptures() && inBounds(targetLine, targetCol) && isValid(targetLine, targetCol)) {
 					movePiece(targetLine, targetCol);
