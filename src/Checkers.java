@@ -6,22 +6,43 @@ import java.io.IOException;
 import java.io.FileWriter;
 import java.util.Scanner;
 
-//Para guardar e ler ficheiros, simplesmente guardar a matriz de Strings (em linhas ou em matriz) do ficheiro e de seguida 
-//ler a matriz quando abrir o ficheiro. Se a matriz for nula numa certa posicao a string sera um espaco seguido de uma quebra
-//de linha
+//Criar uma funcao que verifica o final do jogo conta as pecas e indica o vencedor
+//Alterar o load para dar load a tabuleiros de todos os tamanhos
 
 public class Checkers {
 	Board board;
 	boolean turnW;
 	String[][] game;
 	int[] selected;
+	int gl, gc, np;
 
 	Checkers() {
+		gl = 8;
+		gc = 8;
+		np = 12;
 		turnW = true;
-		game = new String[8][8];
+		game = new String[gl][gc];
 		selected = null;
 		initGame();
-		board = new Board("Damas", 8, 8, 50);
+		board = new Board("Damas", gl, gc, 70);
+		board.setBackgroundProvider(this::background);
+		board.setIconProvider(this::icon);
+		board.addAction("random", this::random);
+		board.addAction("new", this::newGame);
+		board.addAction("save", this::save);
+		board.addAction("load", this::load);
+		board.addMouseListener(this::click);
+	}
+
+	Checkers(int line, int col, int numPieces) {
+		gl = line;
+		gc = line;
+		np = numPieces;
+		turnW = true;
+		game = new String[gl][gc];
+		selected = null;
+		initGame();
+		board = new Board("Damas", gl, gc, 70);
 		board.setBackgroundProvider(this::background);
 		board.setIconProvider(this::icon);
 		board.addAction("random", this::random);
@@ -32,44 +53,57 @@ public class Checkers {
 	}
 
 	void load() {
-		Checkers gui = new Checkers();
-		gui.start();
-		
+		int tmp_line;
+		int fileLines = 0;
 		try {
 			String fileName = board.promptText("File Name:");
+			if (fileName == null)
+				return;
+
+			Scanner countScanner = new Scanner(new File(fileName));
+			while (countScanner.hasNextLine()) {
+				fileLines++;
+				countScanner.nextLine();
+			}
+			fileLines--;
+			countScanner.close();
+			tmp_line = (int)(Math.sqrt(fileLines));
+
 			Scanner myScanner = new Scanner(new File(fileName));
-			
-			game = new String[8][8];
-			selected = null;
-			for (int i = 0; i < 8; i++) {
-				for (int j = 0; j < 8; j++) {
+			Checkers gui = new Checkers(tmp_line, tmp_line, 0);
+
+			gui.game = new String[tmp_line][tmp_line];
+			gui.selected = null;
+			for (int i = 0; i < tmp_line; i++) {
+				for (int j = 0; j < tmp_line; j++) {
 					String line = myScanner.nextLine();
 					if (line.equals("null"))
-						game[i][j] = null;
+						gui.game[i][j] = null;
 					else if (line.equals("black.png"))
-						game[i][j] = "black.png";
+						gui.game[i][j] = "black.png";
 					else if (line.equals("white.png"))
-						game[i][j] = "white.png";
+						gui.game[i][j] = "white.png";
 				}
 			}
 			String line = myScanner.nextLine();
-			turnW = line.equals("true");
+			gui.turnW = line.equals("true");
 			myScanner.close();
-			board.setBackgroundProvider(this::background);
-			board.showMessage("Game loaded successfully");
+			gui.board.showMessage("Game loaded successfully");
+			gui.start();
 		}
 		catch (IOException e) {
-			board.showMessage("Error loading the file: " + e.getMessage());
+			board.showMessage("Error loading the file");
 		}
-	}	
+	}
 
 	void save() {
 		try {
 			String fileName = board.promptText("File Name:");
+			if (fileName == null)
+				return;
 			FileWriter fileWriter = new FileWriter(new File(fileName));
-
-			for (int i = 0; i < 8; i++) {
-				for (int j = 0; j < 8; j++) {
+			for (int i = 0; i < gl; i++) {
+				for (int j = 0; j < gc; j++) {
 					if (game[i][j] == null)
 						fileWriter.write("null" + "\n");
 					else
@@ -84,7 +118,7 @@ public class Checkers {
 			fileWriter.close();
 		}
 		catch (IOException e) { 
-			board.showMessage("Error saving the file: " + e.getMessage());
+			board.showMessage("Error saving the file");
 		}
 	}
 
@@ -93,16 +127,20 @@ public class Checkers {
 		int trys = 1000;
 	
 		while (trys-- > 0) {
-			int line = (int) (Math.random() * 8);
-			int col = (int) (Math.random() * 8);
+			int line = (int) (Math.random() * gl);
+			int col = (int) (Math.random() * gc);
 
+			if (!turnW)
+				board.setTitle("White plays");
+			else
+				board.setTitle("Black plays");
 			if (!sameTeam(line, col)) 
 				continue;
 			selected = new int[]{line, col};
 			if (checkCaptures() && canCapture(line, col)) {
 				for (int i = 0; i < 10000; i++) {
-					int targetLine = (int)(Math.random() * 8);
-					int targetCol = (int)(Math.random() * 8);
+					int targetLine = (int)(Math.random() * gl);
+					int targetCol = (int)(Math.random() * gc);
 	
 					if (checkCaptures() && inBounds(targetLine, targetCol) && isDark(targetLine, targetCol)) {
 						capture(targetLine, targetCol);
@@ -115,8 +153,8 @@ public class Checkers {
 				}
 			}
 			for (int i = 0; i < 1000; i++) {
-				int targetLine = (int)(Math.random() * 8);
-				int targetCol = (int)(Math.random() * 8);
+				int targetLine = (int)(Math.random() * gl);
+				int targetCol = (int)(Math.random() * gc);
 
 				if (!checkCaptures() && inBounds(targetLine, targetCol) && isValid(targetLine, targetCol)) {
 					movePiece(targetLine, targetCol);
@@ -134,7 +172,7 @@ public class Checkers {
 	}
 
 	boolean inBounds(int line, int col) {
-		if (line >= 0 && line < 8 && col >= 0 && col < 8)
+		if (line >= 0 && line < gl && col >= 0 && col < gc)
 			return true;
 		return false;
 	}
@@ -226,9 +264,8 @@ public class Checkers {
 	
 	//Click
 	void click(int line, int col) {
-		if (selected == null || sameTeam(line, col)) {
+		if (selected == null || sameTeam(line, col))
 			pieceSelect(line, col);
-		} 
 		else {
 			if (checkCaptures() && canCapture(selected[0], selected[1])) {
 				capture(line, col);
@@ -240,6 +277,10 @@ public class Checkers {
 			else if (!checkCaptures() && isValid(line, col))
 				movePiece(line, col);
 		}
+		if (turnW)
+			board.setTitle("White plays");
+		else
+			board.setTitle("Black plays");
 	}
 
 	//Checks if the piece that is selected is from the same team so we can change the piece we want to play
@@ -253,8 +294,8 @@ public class Checkers {
 
 	//Checks if there is any chance of a capture in the current play
 	boolean checkCaptures() {
-		for (int i = 0; i < 8; i++) {
-			for (int j = 0; j < 8; j++) {
+		for (int i = 0; i < gl; i++) {
+			for (int j = 0; j < gc; j++) {
 				if(turnW && game[i][j] == "white.png" || !turnW && game[i][j] == "black.png") {
 					if (canCapture(i, j))
 						return true;
@@ -289,28 +330,35 @@ public class Checkers {
 
 	//Inicializa a matriz com as pecas corretas
 	void initGame() {
-		for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++)
-                game[i][j] = null;
-        }
-		for(int i = 0; i < 3; i++) {
-			for(int j = 0; j < 8; j++) {
-				if (i % 2 == 0 && j % 2 != 0)
-					game[i][j] = "black.png";
-				if (i % 2 != 0 && j % 2 == 0)
-					game[i][j] = "black.png";
+		for (int i = 0; i < gl; i++) {
+			for (int j = 0; j < gc; j++) {
+				game[i][j] = null;
 			}
 		}
-		for(int i = 7; i > 4; i--) {
-			for(int j = 0; j < 8; j++) {
-				if (i % 2 == 0 && j % 2 != 0)
+		int placedPieces = 0;
+		for (int i = 0; i < gl && placedPieces < np; i++) {
+			for (int j = 0; j < gc; j++) {
+				if (isDark(i, j)) {
+					game[i][j] = "black.png";
+					placedPieces++;
+					if (placedPieces == np)
+						break;
+				}
+			}
+		}
+		placedPieces = 0;
+		for (int i = gl - 1; i >= 0 && placedPieces < np; i--) {
+			for (int j = 0; j < gc; j++) {
+				if (isDark(i, j)) {
 					game[i][j] = "white.png";
-				if (i % 2 != 0 && j % 2 == 0)
-					game[i][j] = "white.png";
+					placedPieces++;
+					if (placedPieces == np) 
+						break;
+				}
 			}
 		}
 	}
-
+	
 	//Inicializa o tabuleiro com as cores corretas
 	Color background(int line, int col) {
 		if (selected != null && selected[0] == line && selected[1] == col)
@@ -327,7 +375,17 @@ public class Checkers {
 	}
 
 	void newGame() {
-        Checkers gui = new Checkers();
+		int lines = board.promptInt("Number of lines & columns: ");
+		if (lines == -1)
+			return;
+		int numPieces = board.promptInt("Number of pieces per player: ");
+		if (numPieces == -1)
+			return;
+		if (numPieces > ((lines - 1) * 2)) {
+			board.showMessage("Number of pieces not allowed");
+			return;
+		}
+        Checkers gui = new Checkers(lines, lines, numPieces);
         gui.start();
     }
 
