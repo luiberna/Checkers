@@ -34,6 +34,7 @@ public class Checkers {
 		board.addMouseListener(this::click);
 	}
 
+	//Constructor for variable board sizes
 	Checkers(int line, int col, int numPieces) {
 		gl = line;
 		gc = line;
@@ -52,6 +53,7 @@ public class Checkers {
 		board.addMouseListener(this::click);
 	}
 
+	//Loads the information of the file to the board matrix
 	void load() {
 		int tmp_line;
 		int fileLines = 0;
@@ -96,6 +98,7 @@ public class Checkers {
 		}
 	}
 
+	//Saves the information of the board in a file
 	void save() {
 		try {
 			String fileName = board.promptText("File Name:");
@@ -120,6 +123,27 @@ public class Checkers {
 		catch (IOException e) { 
 			board.showMessage("Error saving the file");
 		}
+	}
+
+	//Counts the pieces of each team see who is the winner
+	void getWinner() {
+		int blackPieces = 0;
+		int whitePieces = 0;
+
+		for (int i = 0; i < gl; i++) {
+			for (int j = 0; j < gc; j++) {
+				if (game[i][j] == "black.png")
+					blackPieces++;
+				if (game[i][j] == "white.png")
+					whitePieces++;
+			}
+		}
+		if (blackPieces > whitePieces)
+			board.showMessage("Black Wins with: " + blackPieces + " pieces!");
+		else if(blackPieces < whitePieces)
+			board.showMessage("White Wins with: " + whitePieces + " pieces!");
+		else
+			board.showMessage("Tie!");
 	}
 
 	//Used "trys" so it doesnt break the program when there is no more plays to be done
@@ -161,6 +185,9 @@ public class Checkers {
 					return;
 				}
 			}
+		}
+		if (checkWinner()) {
+			getWinner();
 		}
 	}
 	
@@ -261,9 +288,46 @@ public class Checkers {
 			}
 		}
 	}
+
+	boolean checkNoPieces() {
+		int blackPieces = 0;
+		int whitePieces = 0;
+
+		for (int i = 0; i < gl; i++) {
+			for (int j = 0; j < gc; j++) {
+				if (game[i][j] == "white.png")
+					whitePieces++;
+				if (game[i][j] == "black.png")
+					blackPieces++;
+			}
+		}
+		if (blackPieces == 0 || whitePieces == 0)
+			return true;
+		return false;
+	}
+
+	boolean checkWinner() {
+		if (checkNoPieces())
+			return true;
+		if (checkCaptures())
+			return false;
+		for (int i = 0; i < gl; i++) {
+			for (int j = 0; j < gc; j++) {
+				if (turnW && game[i][j] == "white.png" && (inBounds(i - 1, j + 1) && game[i - 1][j + 1] == null || inBounds(i - 1, j - 1) && game[i - 1][j - 1] == null))
+					return false;
+				if (!turnW && game[i][j] == "black.png" && (inBounds(i + 1, j + 1) && game[i + 1][j + 1] == null || inBounds(i + 1, j - 1) && game[i + 1][j - 1] == null))
+					return false;
+			}
+		}
+		return true;
+	}
 	
 	//Click
 	void click(int line, int col) {
+		if (checkWinner()) {
+			getWinner();
+			return;
+		}
 		if (selected == null || sameTeam(line, col))
 			pieceSelect(line, col);
 		else {
