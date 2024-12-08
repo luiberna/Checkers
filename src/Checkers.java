@@ -24,7 +24,7 @@ public class Checkers {
 		game = new String[gl][gc];
 		selected = null;
 		initGame();
-		board = new Board("Damas", gl, gc, 70);
+		board = new Board("Damas", gl, gc, 80);
 		board.setBackgroundProvider(this::background);
 		board.setIconProvider(this::icon);
 		board.addAction("random", this::random);
@@ -43,7 +43,7 @@ public class Checkers {
 		game = new String[gl][gc];
 		selected = null;
 		initGame();
-		board = new Board("Damas", gl, gc, 70);
+		board = new Board("Damas", gl, gc, 80);
 		board.setBackgroundProvider(this::background);
 		board.setIconProvider(this::icon);
 		board.addAction("random", this::random);
@@ -51,6 +51,28 @@ public class Checkers {
 		board.addAction("save", this::save);
 		board.addAction("load", this::load);
 		board.addMouseListener(this::click);
+	}
+
+	int numberOfWhite() {
+		int totalPieces = 0;
+		for (int i = 0; i < gl; i++) {
+			for (int j = 0; j < gc; j++) {
+				if (game[i][j] == "white.png")
+					totalPieces++;
+			}
+		}
+		return totalPieces;
+	}
+
+	int numberOfBlack() {
+		int totalPieces = 0;
+		for (int i = 0; i < gl; i++) {
+			for (int j = 0; j < gc; j++) {
+				if (game[i][j] == "black.png")
+					totalPieces++;
+			}
+		}
+		return totalPieces;
 	}
 
 	//Loads the information of the file to the board matrix
@@ -155,9 +177,9 @@ public class Checkers {
 			int col = (int) (Math.random() * gc);
 
 			if (!turnW)
-				board.setTitle("White plays");
+				board.setTitle("White plays" + "White Pieces: " + numberOfWhite() + " vs " + "Black Pieces: " + numberOfBlack());
 			else
-				board.setTitle("Black plays");
+				board.setTitle("Black plays" + "White Pieces: " + numberOfWhite() + " vs " + "Black Pieces: " + numberOfBlack());
 			if (!sameTeam(line, col)) 
 				continue;
 			selected = new int[]{line, col};
@@ -342,9 +364,9 @@ public class Checkers {
 				movePiece(line, col);
 		}
 		if (turnW)
-			board.setTitle("White plays");
+			board.setTitle("White plays! " + "      White Pieces: " + numberOfWhite() + " vs " + "Black Pieces: " + numberOfBlack());
 		else
-			board.setTitle("Black plays");
+			board.setTitle("Black plays! " + "      White Pieces: " + numberOfWhite() + " vs " + "Black Pieces: " + numberOfBlack());
 	}
 
 	//Checks if the piece that is selected is from the same team so we can change the piece we want to play
@@ -440,12 +462,14 @@ public class Checkers {
 
 	void newGame() {
 		int lines = board.promptInt("Number of lines & columns: ");
-		if (lines == -1)
+		if (lines == -1 || lines == 0 || lines == 1 || lines == 2) {
+			board.showMessage("Number of lines not allowed");
 			return;
+		}
 		int numPieces = board.promptInt("Number of pieces per player: ");
 		if (numPieces == -1)
 			return;
-		if (numPieces > ((lines - 1) * 2)) {
+		if (numPieces > ((lines - 1) * 2) || lines == 3 && numPieces > 1) {
 			board.showMessage("Number of pieces not allowed");
 			return;
 		}
